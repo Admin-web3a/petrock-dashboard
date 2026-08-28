@@ -101,7 +101,7 @@
 <body>
 
 <h1>🐾 PetRock Dashboard</h1>
-<p class="subtitle">Обновлено: 28.08.2026 14:41 МСК</p>
+<p class="subtitle">Обновлено: 28.08.2026 15:30 МСК</p>
 
 <div class="filter-bar">
   <button class="preset-btn" data-preset="today">Сегодня</button>
@@ -277,12 +277,17 @@ function buildFilterButtons(containerId, leads, keyFn, activeVal, onSelect, minC
 function render(leads) {
   currentLeads = leads;
 
-  // Daily chart
+  // Daily chart — показываем все дни от DATA_FROM до сегодня, даже нулевые
   const dayMap = {};
   leads.forEach(l => { const day = mskDate(l.c); dayMap[day] = (dayMap[day]||0) + 1; });
-  const days = Object.keys(dayMap).sort();
+  const startDay = mskDate(DATA_FROM);
+  const todayDay = todayStr();
+  const days = [];
+  for (let d = new Date(startDay + 'T00:00:00Z'); d.toISOString().slice(0,10) <= todayDay; d.setUTCDate(d.getUTCDate()+1)) {
+    days.push(d.toISOString().slice(0,10));
+  }
   dailyChart.data.labels = days.map(d => d.slice(5));
-  dailyChart.data.datasets[0].data = days.map(d => dayMap[d]);
+  dailyChart.data.datasets[0].data = days.map(d => dayMap[d] || 0);
   dailyChart.update();
 
   // Summary
