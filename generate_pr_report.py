@@ -104,7 +104,9 @@ def build_lead_record(lead):
         "u": get_custom_field(lead, UTM_SOURCE_FIELD_ID) or "",         # utm_source
         "t": get_custom_field(lead, UTM_CONTENT_FIELD_ID) or "",        # utm_content
         "v": get_custom_field(lead, PR_AB_VARIANT_FIELD_ID) or "",      # A/B variant
-        "p": lead.get("price") or 0,                                    # budget (price field)
+        "p":  lead.get("price") or 0,                                   # budget (price field)
+        "d":  lead.get("closed_at") or 0,                               # closed_at (won date)
+        "ua": lead.get("updated_at") or 0,                              # updated_at (fallback)
     }
 
 
@@ -249,6 +251,11 @@ def build_html(leads_raw):
   </div>
 
   <div class="card">
+    <h2>Оплаты по дням</h2>
+    <div style="position:relative;height:260px"><canvas id="paidChart"></canvas></div>
+  </div>
+
+  <div class="card">
     <h2>Воронка: сколько лидов прошли через каждый этап</h2>
     <div id="contentFilterBar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
     <div style="position:relative;height:420px"><canvas id="funnelChart"></canvas></div>
@@ -312,6 +319,16 @@ const dailyChart = new Chart(document.getElementById('dailyChart'), {{
   options: {{
     responsive: true, maintainAspectRatio: false,
     plugins: {{ legend: {{ display: false }}, tooltip: {{ callbacks: {{ label: ctx => ` ${{ctx.parsed.y}} лидов` }} }} }},
+    scales: {{ y: {{ beginAtZero: true, ticks: {{ precision: 0 }}, grid: {{ color: '#2a2a2a' }} }}, x: {{ grid: {{ display: false }} }} }}
+  }}
+}});
+
+const paidChart = new Chart(document.getElementById('paidChart'), {{
+  type: 'bar',
+  data: {{ labels: [], datasets: [{{ label: 'Оплат', data: [], backgroundColor: C.green, borderRadius: 4 }}] }},
+  options: {{
+    responsive: true, maintainAspectRatio: false,
+    plugins: {{ legend: {{ display: false }}, tooltip: {{ callbacks: {{ label: ctx => ` ${{ctx.parsed.y}} оплат` }} }} }},
     scales: {{ y: {{ beginAtZero: true, ticks: {{ precision: 0 }}, grid: {{ color: '#2a2a2a' }} }}, x: {{ grid: {{ display: false }} }} }}
   }}
 }});
@@ -411,10 +428,21 @@ function render(leads) {{
   dailyChart.data.datasets[0].data = days.map(d => dayMap[d] || 0);
   dailyChart.update();
 
+  // Daily paid chart — дата: closed_at для новых, updated_at для старых
+  const paidMap = {{}};
+  leads.filter(l => l.s >= 14).forEach(l => {{
+    const ts = l.d > 0 ? l.d : l.ua;
+    const day = mskDate(ts);
+    paidMap[day] = (paidMap[day]||0) + 1;
+  }});
+  paidChart.data.labels = days.map(d => d.slice(5));
+  paidChart.data.datasets[0].data = days.map(d => paidMap[d] || 0);
+  paidChart.update();
+
   // Summary
   const n    = leads.length;
-  const paid = leads.filter(l => l.s >= 15).length;  // Успешно реализовано
-  const rev  = leads.filter(l => l.s >= 15).reduce((a, l) => a + (l.p || 0), 0);
+  const paid = leads.filter(l => l.s >= 14).length;  // Оплачено ИЛИ Успешно реализовано
+  const rev  = leads.filter(l => l.s >= 14).reduce((a, l) => a + (l.p || 0), 0);
   document.getElementById('statTotal').textContent = n;
   document.getElementById('statPaid').textContent  = paid;
   document.getElementById('statConv').textContent  = n ? (paid/n*100).toFixed(1)+'%' : '—';
@@ -497,7 +525,7 @@ function calcFact(leads) {{
   const open2  = leads.filter(l => l.s >= 3).length;   // Часть 2 открыта
   const open3  = leads.filter(l => l.s >= 5).length;   // Часть 3 открыта
   const orders = leads.filter(l => l.s >= 12).length;  // Платёжная форма готова
-  const purch  = leads.filter(l => l.s >= 15).length;  // Успешно реализовано
+  const purch  = leads.filter(l => l.s >= 14).length;  // Оплачено ИЛИ Успешно реализовано
   return {{
     regs, open1, open2, open3, orders, purchases: purch,
     conv1:     regs   ? open1/regs   : null,
