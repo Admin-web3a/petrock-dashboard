@@ -101,7 +101,7 @@
 <body>
 
 <h1>🐾 PetRock Dashboard</h1>
-<p class="subtitle">Обновлено: 10.09.2026 06:57 МСК</p>
+<p class="subtitle">Обновлено: 10.09.2026 08:46 МСК</p>
 
 <div class="filter-bar">
   <button class="preset-btn" data-preset="today">Сегодня</button>
@@ -118,6 +118,7 @@
   <div class="stat"><div class="val" id="statTotal">—</div><div class="lbl">Всего лидов</div></div>
   <div class="stat"><div class="val" id="statPaid" style="color:var(--green)">—</div><div class="lbl">Оплатили</div></div>
   <div class="stat"><div class="val" id="statConv" style="color:var(--orange)">—</div><div class="lbl">Конверсия в оплату</div></div>
+  <div class="stat"><div class="val" id="statRev" style="color:var(--green)">—</div><div class="lbl">Выручка</div></div>
 </div>
 
 <div class="charts">
@@ -167,7 +168,7 @@
 <p class="footer">Данные из amoCRM · автообновление каждый час</p>
 
 <script>
-const ALL_LEADS   = [{"c":1788685282,"s":1,"u":"","t":"","v":"B"},{"c":1788746283,"s":7,"u":"","t":"","v":"A"},{"c":1788753571,"s":1,"u":"","t":"","v":"B"},{"c":1788756452,"s":1,"u":"","t":"","v":"B"},{"c":1788759625,"s":1,"u":"","t":"","v":"B"},{"c":1788759888,"s":1,"u":"","t":"","v":"B"},{"c":1788761833,"s":1,"u":"","t":"","v":"B"},{"c":1788763630,"s":1,"u":"","t":"","v":"A"},{"c":1788763920,"s":12,"u":"","t":"","v":"B"},{"c":1788764561,"s":1,"u":"","t":"","v":"B"},{"c":1788765118,"s":7,"u":"","t":"","v":"B"},{"c":1788765481,"s":1,"u":"","t":"","v":"B"},{"c":1788766761,"s":1,"u":"","t":"","v":"A"},{"c":1788769058,"s":1,"u":"","t":"","v":"B"},{"c":1788779874,"s":1,"u":"","t":"","v":"B"},{"c":1788692521,"s":14,"u":"","t":"","v":"A"},{"c":1788950616,"s":1,"u":"","t":"","v":"A"}];
+const ALL_LEADS   = [{"c":1788685282,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788746283,"s":7,"u":"","t":"","v":"A","p":0},{"c":1788753571,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788756452,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788759625,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788759888,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788761833,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788763630,"s":1,"u":"","t":"","v":"A","p":0},{"c":1788763920,"s":12,"u":"","t":"","v":"B","p":0},{"c":1788764561,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788765118,"s":7,"u":"","t":"","v":"B","p":0},{"c":1788765481,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788766761,"s":1,"u":"","t":"","v":"A","p":0},{"c":1788769058,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788779874,"s":1,"u":"","t":"","v":"B","p":0},{"c":1788692521,"s":14,"u":"","t":"","v":"A","p":0},{"c":1788950616,"s":1,"u":"","t":"","v":"A","p":0}];
 const STAGE_NAMES = ["Лид создан", "Часть 1 открыта", "Часть 1 прочитана", "Часть 2 открыта", "Часть 2 прочитана", "Часть 3 открыта", "Часть 3 прочитана", "Увидел оффер", "Тариф выбран", "Checkout открыт", "Данные checkout отправлены", "Payment intent created", "Платёжная форма готова", "Оплата не прошла", "Оплачено", "Успешно реализовано"];
 const DATA_FROM   = 1787788800;
 
@@ -291,11 +292,13 @@ function render(leads) {
   dailyChart.update();
 
   // Summary
-  const n = leads.length;
-  const paid = leads.filter(l => l.s >= 14).length;
+  const n    = leads.length;
+  const paid = leads.filter(l => l.s >= 15).length;  // Успешно реализовано
+  const rev  = leads.filter(l => l.s >= 15).reduce((a, l) => a + (l.p || 0), 0);
   document.getElementById('statTotal').textContent = n;
   document.getElementById('statPaid').textContent  = paid;
   document.getElementById('statConv').textContent  = n ? (paid/n*100).toFixed(1)+'%' : '—';
+  document.getElementById('statRev').textContent   = rev ? rev.toLocaleString('ru-RU') + ' ₽' : '—';
 
   // UTM Source chart
   const utmMap = {};
@@ -374,7 +377,7 @@ function calcFact(leads) {
   const open2  = leads.filter(l => l.s >= 3).length;   // Часть 2 открыта
   const open3  = leads.filter(l => l.s >= 5).length;   // Часть 3 открыта
   const orders = leads.filter(l => l.s >= 12).length;  // Платёжная форма готова
-  const purch  = leads.filter(l => l.s >= 14).length;  // Оплачено
+  const purch  = leads.filter(l => l.s >= 15).length;  // Успешно реализовано
   return {
     regs, open1, open2, open3, orders, purchases: purch,
     conv1:     regs   ? open1/regs   : null,
